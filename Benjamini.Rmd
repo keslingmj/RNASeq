@@ -1,0 +1,428 @@
+---
+title: "Effect of Sample Replicates on Statistical Power and False Discovery Rates Using Simulated RNA-Seq Data"
+author: "Michael Kesling, michael dot kesling at alumni dot stanford <dot> edu"
+email: "michael dot kesling at alumni dot stanford <dot> edu"
+# date: "7/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.height=12, fig.width=9, 
+                      out.width='90%', out.height='90%',
+                      fig.align = "center", dpi=300) 
+# dpi=300 was essential for outputting quality figures using knitr
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+require(ggplot2)
+require(dplyr)
+require(tibble)
+require(stringr)
+require(grid)
+require(gridExtra)
+require(gtable)
+require(genefilter)
+require(ggpubr)
+require(knitr)
+
+theme_set(theme_minimal())
+theme_update(plot.title = element_text(hjust=0.5))
+
+pal <- c("#7570b3", "#1b9e77")
+pal2 <- c("#ff7f00", "#377eb8")
+
+```
+
+## FDR, Power, and Benjamini-Hochberg
+
+### Motivation
+As RNA-Seq experiments are time- and money-consuming, biologists typically want
+to reduce the number of samples processed in order to save resources.
+
+Statisticians, on the other hand, know that the more data one has, the better
+one can see the signal through the noise.  They also know that the biological
+variability between samples is large.
+
+This document performs simulations of RNA-Seq experiments of increasing complexity
+so that the key metrics of Statistical Power and the False Discover Rate (FDR)
+can be measured as a function of the number of sample replicates.
+
+Furthermore, it's widely known that in order to publish a list of transcripts, one
+needs to control the level of False Positives by adjusting the p-values of
+the transcripts.  This is typically done using the Benjamini-Hochberg technique of
+converting p-values to q-values to correct for the multiple-testing problem
+that exists in RNA-Seq analysis.  We therefore look at the metrics of Power
+and FDR both before and after the Benjamini-Hochberg (BH) correction as a 
+function of the number of (biological) sample replicates.
+
+### Power and FDR
+Ideally, we'll be able to identify all the transcripts that are changing between
+control and treatment samples.  In this simulation, we call these transcripts
+the **alt-transcripts** and the fraction of them that are correctly identified by us
+is the True Positive Rate (TPR), which is also known as the **Statistical Power**.
+When the Power is low, that means that many transcripts of interest were not identified.
+These transcripts are the False Negatives.  So the higher the Power, the lower
+number of False Negatives.
+
+In order to perform a good analysis, it's not only important to correctly identify the
+transcripts that are of interest (True Positives), but it's also important to not identify transcripts that are truely not changing between control and treatment samples.  Doing so generates False Positives.  One commonly-used metric for this is called
+the **False Discovery Rate (FDR)**.  The FDR is the fraction of transcripts we
+predicted as being interesting that were, in fact, not changing.
+
+So in order to have a successful study, we need both high Power and a low FDR.
+
+### Simulation Procedure
+
+We start off by generating simulated datasets, as in this case, we can define
+which transcripts don't change in their expression levels between the control and
+treatment samples--we call these transcripts 'null'--and which transcripts do--we
+call these transcripts 'alt' for 'alternative-hypothesis'.  
+That way, we have a definitive way
+of knowing exactly which transcripts are true positives (TP), False Negatives (FN), etc.
+All transcripts have expression levels that are the same between the various
+control samples and changes only occur between control and treatment samples.
+This simplifying assumption removes confounding factors (age, sex, family history)
+from the simulation's early stages.
+
+At the beginning of this study, we start off using a simple normal distribution
+of transcripts, and later move to a more realistic distribution of transcripts.
+
+Although transcripts can vary greatly in their basal expression level, it's the
+relative changes that occur from sample-to-sample that are generally of interest.
+So that the relative expression level of transcripts can be viewed easily on a
+single scale, we've Z-normalized each transcript according to its mean and standard
+deviation.  A value of 0 is equal to a particular transcript's mean and a value 
+of -1 is equal to 1 standard deviation of expression lower than its mean.  The 
+standard deviations are measured across the various control samples.
+
+We start by defining the parameters of the study.
+These values (n, fracAlt, M, mu0, sd0, muA, sdA) can be modified by the user
+in the RMD document in RStudio.  If the user is a beginner, then this is the 
+only place changes are recommended.
+```{r}
+###################
+# Set user-defined parameters
+n = 10000                                   # number of total transcripts
+fracAlt = 0.1                               # fraction of tc's with condition=alt
+M <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 24, 32) # varying # replicates per ctrl/trtmt
+mu0 = 0                                     # null tc mean
+sd0 = 1                                     # null tc sd
+muA = 2                                     # alt tc mean
+sdA = 1                                     # alt tc sd
+###################
+
+nA = round(n * fracAlt)                     # alt tc in DF
+n0 = n - nA                                 # null tc in DF
+
+```
+I'm going to define a few functions that will be used in this study.  The code
+for these functions, as well as most of the code, is viewable in the original .RMD file, but not in the .html report:
+
+(1) createMultiSampleDF creates a dataframe of randomized data about a null mean 
+or an alternative
+mean, depending on whether a gene has null-behavior or not.  The dataframe varies
+in the number of samples depending on the parameter $m$
+(2) FDR_Power_BH calculates the Power and FDR for the data frame, with and
+without the Benjamini-Hochberg (FDR) correction.
+(3) printFdrPowerPlots.  For every value of the gene-level average expression
+value in the 'treatment' samples, muA, it plots Power and FDR as a
+function of the number of sample replicates, m.  The values of both Power and FDR 
+are plotted before and after the Benjamini-Hochberg p-value correction.
+(4) createHistNullAltGenes.  This function creates 2 pair of histograms.  The first
+pair looks at null genes (those that don't change in the study) and alt genes
+(those that do change) only in the controls samples.  It shows the gene expression
+distribution in a single control sample and then averaged across m samples.
+The second pair of histograms does the same, but for 'treatment' samples where
+the 'alt' genes DO change (either up or down) by $muA$ STDEVs.
+```{r, include=FALSE}
+createMultiSampleDF <- function(n, fracAlt, m, mu0, sd0, muA, sdA){
+   nA = round(n * fracAlt)                     # alt genes in DF
+   n0 = n - nA                                 # null genes in DF
+   
+   altGeneLabels <- paste0(rep("alt", nA), 1:nA)
+   nullGeneLabels <- paste0(rep("null", n0), 1:n0)
+   geneLabels <- c(nullGeneLabels, altGeneLabels)
+   
+   ctrlSamples <- replicate(m, rnorm(n, mu0, sd0)) # background dist for all genes
+   trtmtNullDist <-replicate(m, rnorm(n0, mu0, sd0)) # null-gene dist same in treatment
+   trtmtAltDist <- replicate(m, c(rnorm(nA/2, muA, sdA),rnorm(nA/2, -muA, sdA)))
+   # alt-gene expression rises or falls by muA in treatment samples.
+   trtmtSamples <- rbind.data.frame(trtmtNullDist, trtmtAltDist)
+   
+   colnames(ctrlSamples) <- paste0("Ctrl", 1:m)
+   colnames(trtmtSamples) <- paste0("Trtmt", 1:m)
+   
+   df <- cbind.data.frame(ctrlSamples, trtmtSamples)
+   rownames(df) <- geneLabels
+   return(df)
+}
+
+FDR_Power_BH <- function(df, pvalcut = 0.05, fdrCut = 0.05){
+   # just use row T-Tests for now, from the 'genefilter' package:
+   s <- factor(c(rep("c",m),rep("e",m)))
+   rtt <- rowttests(as.matrix(df), s)
+   
+   # add 'genename' and 'class' columns and adjusted p-values
+   rtt_tbl <- rtt %>%
+      rownames_to_column('genename') %>%
+      mutate(p.value.adjust = p.adjust(rtt$p.value, method="BH")) %>%
+      mutate(class = (ifelse(str_detect(genename, "^null"), "actual=0", 
+                             "actual=1"))) %>%
+      as_tibble()
+   
+
+   # makes confusion matrices for p-value and adjusted p-value
+   confM <- table(rtt_tbl$class, ifelse(rtt_tbl$p.value >= pvalcut, "predict=0",
+                                        "predict=1"))
+   confM_adj <- table(rtt_tbl$class, ifelse(rtt_tbl$p.value.adjust >= pvalcut,
+                                            "predict=0", "predict=1"))
+   # handling error of confM_adj having no "predict=1" events:
+   if(sum(dim(confM_adj)) != 4){
+      confM_adj <- cbind(confM_adj, c(0,0))
+      colnames(confM_adj) <- c("predict=0", "predict=1")
+   }
+   
+   
+   # calculate FDR and Power before and after B-H adjustment 
+   fnr <- confM[2,1]/sum(confM[2,]) # -- type II error rate (things we missed)
+   fdr <- confM[1,2]/sum(confM[,2]) # -- fdr. Things we predicted that we shouldn't have
+   fnrAdj <- confM_adj[2,1]/sum(confM_adj[2,])
+   fdrAdj <- confM_adj[1,2]/sum(confM_adj[,2])
+   tpr = 1 - fnr; tprAdj = 1 - fnrAdj
+   return(list("pwr"=tpr, "pwrAdj"=tprAdj, "fdr"=fdr, "fdrAdj"=fdrAdj,
+               "confM" = confM, "confM_adj" = confM_adj))
+}
+
+printFdrPowerPlots <- function(powerL, powerAdjL, fdrL, fdrAdjL){
+   pwr <- data.frame(cbind(rep(M,2), c(powerL, powerAdjL), c(rep("preBH",length(M)),
+                       rep("postBH", length(M)))), stringsAsFactors = FALSE)
+   colnames(pwr) <- c("Number_Replicates", "Power", "PrePostBH")
+   class(pwr$Power) <- "numeric"
+   class(pwr$Number_Replicates) <- "numeric"
+   pwr$PrePostBH <- as.factor(pwr$PrePostBH)
+   
+   falseD <- data.frame(cbind(rep(M,2), c(fdrL, fdrAdjL), c(rep("preBH",length(M)),
+                       rep("postBH", length(M)))), stringsAsFactors = FALSE)
+   colnames(falseD) <- c("Number_Replicates", "FDR", "PrePostBH")
+   class(falseD$Number_Replicates) <- "numeric"
+   class(falseD$FDR) <- "numeric"
+   falseD$PrePostBH <- as.factor(falseD$PrePostBH)
+
+   g1 <- ggplot(pwr, aes(x=Number_Replicates, y=Power)) +
+      geom_point(aes(colour=PrePostBH), na.rm=TRUE, size=3) + 
+      theme(legend.position=c(0.8, 0.2),
+            legend.justification = "centre",
+            legend.background=element_rect(size=0.5),
+            panel.border = element_rect(colour="black", fill=NA, size=1),
+            plot.margin = unit(c(0.5,0.5,0.5,1),"cm")) +
+      scale_color_manual(values=pal) +
+      scale_y_continuous(limits=c(-0.05,1.05))
+      
+
+   g2 <- ggplot(falseD, aes(x=Number_Replicates, y=FDR)) + 
+      geom_point(aes(colour=PrePostBH), na.rm=TRUE, size=3) + 
+      geom_hline(yintercept=0.05, linetype="dotted") +
+      theme(legend.position = c(0.8, 0.8), 
+            legend.justification= "centre",
+            legend.background = element_rect(size=0.5),
+            panel.border = element_rect(colour="black", fill=NA, size=1),
+            plot.margin = unit(c(0.5,1,0.5,0.5),"cm")) +
+      scale_color_manual(values=pal) +
+      scale_y_continuous(limits=c(-0.05, 1.05))
+
+   #returnList <- list("pwr"=g1, "fdr"=g2)
+   return(list("pwr"=g1, "fdr"=g2))
+}
+
+createHistNullAltGenes <- function(nA, n0, fracAlt, m, mu0, muA, sd0, sdA, title, lim){
+   # creates 2 histograms. One with 1 treatment sample only.
+   # the other with average across m treatment samples.
+   # the df's will be merged into a single one so that facet_wrap can be used
+   # to standardize the 2 y-axes.
+   n = n0 + nA
+   df = createMultiSampleDF(n, fracAlt, m, mu0, sd0, muA, sdA)
+   df <- df %>% rownames_to_column('genename') %>% mutate(gene_class =
+                     (ifelse(str_detect(genename, "^null"), "null", "alt")))
+   
+   # set up control-samples df
+   singleCtrlSample = df[,c(1,2,2*m+2)]
+   avgCtrls <- cbind.data.frame(df[1], rowSums(df[2:(m+1)])/m, df[,ncol(df)])
+   colnames(singleCtrlSample) <- c("genename", "x", "gene_class")
+   colnames(avgCtrls) <- c("genename", "x", "gene_class")
+   mrgedCtrls <- rbind.data.frame(singleCtrlSample, avgCtrls) %>%
+      mutate(hist=factor(c(rep("single", n), rep("average", n)), levels=c("single",
+                                                                         "average")))
+   # set up treatment-samples df
+   singleTrtmtSample = df[,c(1,m+2,2*m+2)]
+   avgTrtmts = cbind.data.frame(df[1], rowSums(df[(m+2):(2*m+1)])/m, df[,ncol(df)])
+   colnames(singleTrtmtSample) <- c("genename", "x", "gene_class")
+   colnames(avgTrtmts) <- c("genename", "x", "gene_class")
+   mrged <- rbind.data.frame(singleTrtmtSample, avgTrtmts) %>%
+      mutate(hist=factor(c(rep("single",n),rep("average",n)),levels=c("single",
+                                                                      "average")))
+   # function that creates horizontal double histogram
+   createDoubleGrobObj <- function(df, title1){
+      ggplot(df, aes(x=x)) + geom_histogram(aes(fill=gene_class), alpha=.7,
+                                         position="identity", na.rm=TRUE) +
+      facet_wrap(~hist, ncol =2) +
+      ggtitle(title1) + 
+      xlab("Standard Deviations from Z-Normalized Expression") +
+      xlim(c(-lim,lim)) +
+      theme(legend.position = c(0.9, 0.7),
+            legend.background = element_rect(size=0.5),
+            panel.border = element_rect(colour="black", fill=NA, size=1),
+            plot.margin= unit(c(0.5, 1, 0.5, 1), "cm")) +
+      scale_fill_manual(values = pal2)
+   }
+   
+   title1=paste(title, m, " Control Samples")
+   mrgedCtrlGrob <- createDoubleGrobObj(mrgedCtrls, title1)
+   title2=paste(title, m, " Treatment Samples")
+   mrgedGrob <- createDoubleGrobObj(mrged, title2)
+   return(list("treatment"=mrgedGrob, "control" = mrgedCtrlGrob))
+}
+
+
+```
+Our dataset contains $m$ control and $m$ experimental samples.  $m$
+takes on the values defined in the variable M, which was defined above under the
+section "Set user-defined Parameters."  With each value of $m$, we create
+a dataframe, which is analogous to a spreadsheet.
+From that dataframe, df, we calculate the pre- and post-BH values of Power and FDR.  Each of these 4 values is saved to a list for later plotting.
+
+```{r, include=FALSE}
+powerL = c(); powerAdjL = c(); fdrL = c(); fdrAdjL = c()
+for(m in M){
+   df = createMultiSampleDF(n, fracAlt, m, mu0, sd0, muA, sdA)
+   lst = FDR_Power_BH(df, pvalcut = 0.05, fdrCut = 0.05)
+   powerL <- c(powerL, lst$pwr); powerAdjL <- c(powerAdjL, lst$pwrAdj)
+   fdrL <- c(fdrL, lst$fdr); fdrAdjL <- c(fdrAdjL, lst$fdrAdj)
+}
+```
+We now print out the Power and the FDR as a function of m, the number of 
+sample replicates.  We'll also include the histogram of the null and 'alt' transcripts
+in the treatment samples as well as the same in the control samples.  
+```{r} 
+# create the 4 histograms
+title = paste0("Demonstration of Random Transcript Expression Noise
+Cancellation by Averaging Across ")
+x_lim = 4; m=8
+gHist <- createHistNullAltGenes(nA, n0, fracAlt, m, mu0, muA, sd0, sdA, title, x_lim)
+
+# create the Power vs Replicates and FDR vs Replicates Plots
+title = "Number of Replicates Effect on Power, FDR Using Idealized Data"
+grobs <- printFdrPowerPlots(powerL, powerAdjL, fdrL, fdrAdjL)
+g2 <- arrangeGrob(grobs$pwr, grobs$fdr, ncol=2, top=title) 
+
+# create the main title for the figure
+main_title = paste0("Expression Distributions, Power, and FDR using Idealized Data\n", "with Diff Expressed Transcripts Averaging ", muA, " STDEV from Other Transcripts")
+
+# arrange figures and print to document                    
+suppressMessages(grid.arrange(gHist$control, gHist$treatment, g2,nrow=3,
+                              top=textGrob(main_title, gp=gpar(fontsize=15))))
+
+```
+
+
+The alternative hypothesis 'alt' transcripts above are all of interest--whether or not
+they can be detected.  Yet, they are all on the verge of significance on a per-gene
+level, as their average value in the "treatment" samples is either -2 STDEV or 
++2 STDEV from their "control" sample values.  These should yield a p-value of exactly
+0.05 given an unlimited number of samples which would overcome the noisiness of the data.
+
+At the top of the figure, we see that the alt-transcripts, in orange, have the 
+same distribution as the null-transcripts in blue as long as we're in a control
+sample.
+
+We also see that the distribution becomes a lot tighter (smaller standard deviation)
+if we take the average across 8 control samples rather than just the distribution
+of transcript expression level for a single sample.  This is the well known
+Central Limit Theorem (CLT) of statistics in action.  It works because as one averages
+values, the random noise in the data tend to cancel each other out across samples
+and it becomes easier to see the signal over the noise.
+
+We're plotting before-and-after-averaging histograms in order to underscore why
+sample replicate number gives us better data discrimination with respect to Power
+and FDR at the bottom of the figure.
+
+The middle pair of panels show the distribution of a single 'treatment' sample
+and the averaging of 8 treatment samples for the set of transcripts.  We see the 
+same thing as at the top, except we notice that the alt-transcripts expression is
+centered around either -2 or +2 standard deviations from the mean, as these are
+the transcripts whose expression levels are changing.
+
+In the bottom pair of panels, we notice several things.  First, the FDR never
+really gets below about 30% unless we correct it using Benjamini-Hochberg.  The reason
+for this has to do with the fact that there are many more transcripts (9000) that are
+not changing between control and treatment samples compared to the number that are
+changing (1000).  Using an uncorrected p-value cutoff of 0.05 (preBH), we would
+expect to incorrectly identify 9000 * 0.05 = 450 false-positive transcripts, along
+with the 1000 true-positive transcripts (assuming sufficient power) giving a
+FDR of approximately 450/1450 = 31%.
+
+This means that when the total number of truly changing transcripts is much smaller
+than the number of transcripts that are not changing, we will need BH or a similar
+method to convert our p-values to q-values in order to maintain a reasonable FDR.
+
+While FDR can be controlled using BH even with small numbers of sample replicates,
+statistical power remains low until, say, we use at least 7 control samples and 7 treatment 
+samples, at which the majority of these transcripts can be found (power > 0.50).  And this
+is using idealized data which has less biological noise than most real-life
+studies.
+
+This simulation implies that the transcripts reported in journals as having a FDR <= 0.05 will have expression levels that
+vary between the treatment and control samples more than 2 STDEVs from their control means (unless
+the number of replicates, m, is high).
+
+Next, we'll repeat the above analysis, but setting 'alt' transcripts as having a
+-3 or +3 STDEV mean in the 'treatment' samples.
+```{r}
+### Set new mean of alt-transcripts
+muA = 3
+```
+```{r, include=FALSE}
+#, fig.height=12, fig.width=9, out.width='90%', out.height='90%'}
+muA = 3
+###
+powerL = c(); powerAdjL = c(); fdrL = c(); fdrAdjL = c()
+for(m in M){
+   df = createMultiSampleDF(n, fracAlt, m, mu0, sd0, muA, sdA)
+   lst = FDR_Power_BH(df, pvalcut = 0.05, fdrCut = 0.05)
+   powerL <- c(powerL, lst$pwr); powerAdjL <- c(powerAdjL, lst$pwrAdj)
+   fdrL <- c(fdrL, lst$fdr); fdrAdjL <- c(fdrAdjL, lst$fdrAdj)
+}
+###
+```
+```{r}
+title = paste0("Demonstration of Random Transcript Expression Noise
+Cancellation by Averaging Across ")
+x_lim = 4
+m=8
+gHist <- createHistNullAltGenes(nA, n0, fracAlt, m, mu0, muA, sd0, sdA, title, x_lim)
+
+title = "Number of Replicates Effect on Power, FDR Using Idealized Data"
+grobs <- printFdrPowerPlots(powerL, powerAdjL, fdrL, fdrAdjL)
+g2 <- arrangeGrob(grobs$pwr, grobs$fdr, ncol=2, top=title) 
+
+main_title = paste0("Expression Distributions, Power, and FDR using Idealized Data\n", "with Diff Expressed Transcripts Averaging ", muA, " STDEV from Other Transcripts")
+                    
+suppressMessages(grid.arrange(gHist$control, gHist$treatment, g2, nrow=3,
+                              top=textGrob(main_title, gp=gpar(fontsize=15))))
+
+
+```
+Now that we're looking at transcripts that change more substantially between treatment
+and controls samples, we see that we get good Power/FDR Performance with a few
+less sample replicates.
+
+This fact is due to better separation between the null-transcripts and the alt-transcripts, as viewed in the pair of histograms in the middle panel. 
+
+We see that even with only 5 sample replicates each, we're seeing a post-Benjamini-
+Hochberg corrected FDR such that about 50% of the genes are true positives.  This
+will give a good number of genes to analyze in a research publication, but we also
+see that going to 6 or sample replicates each improves the post-BH power substantially.
+
+With sample replicates of 4 each (control/treatment), there should be a good number of transcripts to
+report on.  3 replicates each will limit us to transcripts that vary even more between sample type.
+
+Again, up until this point, we've been using idealized data.  Real-life samples will require a greater number of replicates, and we explore this below.
+
+
