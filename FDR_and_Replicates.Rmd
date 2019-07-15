@@ -3,7 +3,7 @@ title: "Effect of Sample Replicates on Statistical Power and False Discovery Rat
 author: "Michael Kesling, michael dot kesling at alumni dot stanford <dot> edu"
 email: "michael dot kesling at alumni dot stanford <dot> edu"
 # date: "7/2/2019"
-output: html_document
+output: rmarkdown::github_document # html_document
 ---
 
 ```{r setup, include=FALSE}
