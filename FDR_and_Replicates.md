@@ -142,7 +142,7 @@ Real Data
 
 In order to simulate more realistic data, we'll first look at examples of actual RNA-Seq data obtained from healthy breast and breast cancer because breast cancer a well- studied disease, and it gives us a chance to compare variability between healthy (control) samples and between diseased samples.
 
-In order to facilitate obtaining RNA-Seq data samples without RNA degradation or 5'- or 3'- end bias, I focused on samples that passed the QC-pipeline of Wang, et. al. *DOI: 10.1038/sdata.2018.61*, which looked at cross-study normalization of many cancer and healthy patient samples. The cancer samples are originally from the TCGA project and the healthy samples are originally from the GTEX project.
+In order to facilitate obtaining RNA-Seq data samples without RNA degradation or 5'- or 3'- end bias, I focused on samples that passed the QC-pipeline of [Wang, et. al.](https://dx.doi.org/10.1038/sdata.2018.61), which looked at cross-study normalization of many cancer and healthy patient samples. The cancer samples are originally from the TCGA project and the healthy samples are originally from the GTEX project.
 
 #### Downloading the Wang Datasets
 
@@ -278,7 +278,7 @@ ggplot(dfHardy0, aes(x=mean, y=variance)) +
 
 <img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
-We notice that the variance is much better controlled than earlier experiments where the variance was all over the place. See Molly Hammell's data <https://www.youtube.com/watch?v=_DorzGorOA0> at about 3/4 through the presentation where she compares Poisson vs Negative Binomial fitting.
+We notice that the variance is much better controlled than earlier experiments where the variance was all over the place. [See Molly Hammell's data](https://youtu.be/_DorzGorOA0?t=3797) where she compares Poisson vs Negative Binomial fitting.
 
 It will be interesting to compare this to the cancer samples.
 
