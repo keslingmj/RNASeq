@@ -144,70 +144,105 @@ In order to simulate more realistic data, we'll first look at examples of actual
 
 In order to facilitate obtaining RNA-Seq data samples without RNA degradation or 5'- or 3'- end bias, I focused on samples that passed the QC-pipeline of Wang, et. al. *DOI: 10.1038/sdata.2018.61*, which looked at cross-study normalization of many cancer and healthy patient samples. The cancer samples are originally from the TCGA project and the healthy samples are originally from the GTEX project.
 
-#### Downloading Wang Datasets
+#### Downloading the Wang Datasets
 
-The relevant file of breast cancer data was found at <https://figshare.com/articles/Data_record_3/5330593> and called "brca-rsem-fpkm-tcga-t.txt.gz" and was 35.11 MB compressed. Once decompressed, it yielded a single file called "brcarsemfpkmtcgat.txt".
+The relevant file of breast cancer data was found at <https://figshare.com/articles/Data_record_3/5330593>. This "Data Record 3" refers to samples that 1) had "Expected Counts" from the RSEM algorithm, 2) Uniform Processing yielding FPKM from RSEM's output and quantile normalized, and 3) batch-effect-corrected using the ComBat software. The BRCA data file is called "brca-rsem-fpkm-tcga-t.txt.gz" and was 35.11 MB compressed. Once decompressed, it yielded a single file called "brcarsemfpkmtcgat.txt".
 
 The relevant file of healthy breast samples was found at the same figshare.com link above and the file is called "breast-rsem-fpkm-gtex.txt.gz" is 3.52 MB compressed. Once decompressed, it yielded a single file called "breastrsemfpkmgtex.txt".
 
-### Selecting Samples
+-   There are TCGA samples that are actually healthy. I still need to go back and review the 3rd breast sample from the figshare.com directory.\*
 
-In order to reduce variability between breast cancer samples, I chose women between age 40 and 50, who were white, non-hispanic, whom had died from the disease and were part of the TCGA project. These were obtained from the <https://portal.gdc.cancer.gov> database There were 109 such samples. This file is called BRCA\_40-49\_White\_109subjects.tsv.
+#### Subsetting the Wang Datasets
 
-I checked whether or not these samples ended up in the Wang dataset (brcarsemfpkmtcgat.txt file). 104 of the 109 samples did. This dataset is ranked according to mutations found.
+In order to reduce variability between breast cancer samples, I used sample information to reduce the Wang datasets.
 
-I subsetted the Wang Breast Cancer Set (brcarsemfpkmtcgat.txt) to those 104 samples just mentioned. The reduced file is available as "brcaFPKM\_104.txt".
+For the breast cancer data, samples were subsetted using the <https://portal.gdc.cancer.gov> database. Selecting women between age 40 and 50, who were white, non-hispanic, whom had died from the disease and were part of the TCGA project yielded 109 sample names. Of these 109 samples, 104 were found in the Wang breast cancer dataset. This reduced dataset is called "brcaFPKM\_104.txt".
 
-I went to the GTEx Portal (<https://www.gtexportal.org/home/datasets>) to select healthy breast samples. I need females between 40 and 50 that had a Hardy score of 1, ideally. From the GTEX v7 release, there are only 3 samples that are female, 40-49, and have a Hardy score of 1 (all subjects are dead)
+Sample information for the healthy breast samples were obtained at the GTEx Portal (<https://www.gtexportal.org/home/datasets>). The "GTEx\_v7\_Annotations\_SubjectPhenotypesDS.txt" file was downloaded and contains sample attribute data for 752 patients. Of these, 54 were women aged 40-49. Of those, 43 died on a ventilator (Hardy score = 0). These 43 samples were used to subset the 91-sample Wang healthy breast dataset, of which 19 were found in the overlap. This reduced dataset is called "breastRSEMFPKM\_Hardy0.txt". The usage of a ventilator may be a confounder with the breast cancer dataset, but I won't pursue that at the moment.
 
-name sex age Hardy in\_Wang GTEX-12ZZX 2 40-49 1 yes column68 GTEX-YFC4 2 40-49 1 yes column28 GTEX-YJ8O 2 40-49 1 no
+Scatter Plots
+-------------
 
-I took the first 2, their columns along with the gene column, and created a file healthyBreastPair.txt
-
-For a better comparison with cancer patients, we'll choose a few samples who died a slow death, with Hardy scores of 4. However, there is only one such sample. Instead, we'll choose a Hardy score of 0, which means that the patient was on a ventilator when they died.
-
-### To finish later
-
-Scatter Plot
-------------
-
-Let's get an idea of within-group noise by taking the 2 healthy breast samples and creating a scatter plot.
+Let's get an idea of within-group noise and between-group noise by taking the 2 healthy breast samples, 2 breast-cancer samples and a healthy and a cancer sample and create scatter plots.
 
 ``` r
-fh <- file("/Users/mjk/Desktop/Tresorit_iOS/projects/RNA-Seq/Breast_RNASeq_Data/healthyBreastPair.txt", "r")
-df <- read.table(fh, sep="\t", header=TRUE)
-colnames(df) <- c("Gene", "Sample1", "Sample2")
-close(fh)
-
-# create 2 tibbles for fold-change lines
-tmp2 <- cbind(df[2], 0.5*df[2])
-tmp3 <- cbind(df[2], 2*df[2])
-colnames(tmp2) <- c("Sample1", "scaled")
-colnames(tmp3) <- c("Sample1", "scaled")
-df2 <- as_tibble(tmp2)
-df3 <- as_tibble(tmp3)
-
-# make scatter plot
-g <- ggplot(df, aes(x=Sample1, y=Sample2)) + 
+# define scatterPair function
+scatterPair <- function(title, df, x1, y1){
+   # x1 and y1 are strings and must be converted to a symbol by using
+   # "as.name" and evaluate it with "!!"
+   g <- ggplot(df, aes(x=!!as.name(x1), y=!!as.name(y1))) + 
    geom_point(size=0.2) + 
+   geom_density_2d(colour="orange") +
    scale_x_continuous(trans = 'log2') +
    scale_y_continuous(trans = 'log2') +
-   labs(title="Scatterplot of RNA-Seq of 2 Healthy Breast Samples (FPKM)")
+   labs(title=title)
+   return(g)
+}
 
-g + geom_line(aes(x=Sample1, y=scaled), data=df2, col="blue") +
-   geom_line(aes(x=Sample1, y=scaled), data=df3, col="green")
+# read in healthy breast data and breast cancer data as data-frames:
+fh1 <- file("breastRSEMFPKM_Hardy0.txt", "r")
+dfHealthy <- read.table(fh1, sep="\t", header=TRUE)
+close(fh1)
+fh2 <- file("brcaFPKM_104.txt", "r")
+dfBrca <- read.table(fh2, sep="\t", header=TRUE)
+close(fh2)
+
+# randomly select 2 healthy and 2 brca sample indices and create smaller df:
+set.seed(31382)
+hlthIdx <- sample(3:ncol(dfHealthy), 2, replace = FALSE)
+brcaIdx <- sample(2:ncol(dfBrca), 2, replace = FALSE)
+dfHealthPair <- dfHealthy[colnames(dfHealthy)[hlthIdx]]
+dfBrcaPair <- dfBrca[colnames(dfBrca)[brcaIdx]]
+df2by2 <- as_tibble(cbind(dfHealthy[1], dfHealthPair, dfBrcaPair))
+
+# plot scatterplots:
+g1 <- scatterPair("Healthy-1 by Healthy-2", df2by2, colnames(df2by2)[2], colnames(df2by2)[3])
+g2 <- scatterPair("Cancer-1 by Cancer-2", df2by2, colnames(df2by2)[4], colnames(df2by2)[5])
+g3 <- scatterPair("Healthy-1 by Cancer-1", df2by2, colnames(df2by2)[2], colnames(df2by2)[4])
+g4 <- scatterPair("Healthy-1 by Cancer-2", df2by2, colnames(df2by2)[2], colnames(df2by2)[5])
+g5 <- scatterPair("Healthy-2 by Cancer-1", df2by2, colnames(df2by2)[3], colnames(df2by2)[4])
+g6 <- scatterPair("Healthy-2 by Cancer-2", df2by2, colnames(df2by2)[3], colnames(df2by2)[5])
+   
+
+suppressMessages(grid.arrange(g1, g2, g3, g4, g5, g6, nrow=3,
+                              top=textGrob("Sample Pair FPKM Scatter Plots",gp=gpar(fontsize=15))))
 ```
 
 <img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
-We need to answer a few basic questions: Where does a minimum read per transcript cutoff occur on this plot (e.g. &lt; 10 reads per transcript)? Is there an efficient way to model this data so as to reproduce it in a simulation? Draw sloped lines to see 2-fold changes. We'd like to plot variance vs mean across a bunch of biological replicates, and model it by the negative binomial.
+#### Interpretation
+
+It appears that the cancer x cancer samples have a bit more noise in the mid-range of the gene expression levels compared to healthy x healthy, as is expected. It also appears that the normal samples (GTEX) have filtered out low-level signals, perhaps at the level of reads-per-gene. We also see that in the cancer samples the FPKM at very low levels is quantized, as expected when derived from integer-valued reads-per-gene
+
+We also see in the lower 4 plots (healthy vs cancer) more extreme outliers *in the upper half of the expression range.*
+
+Also note that the scales for the 2 samples on the diagonal are often different, which will complicate any quantitative gene comparison. *This needs to be rectified in some way.*
+
+#### Boxplots
+
+Let's look at the boxplots for these 4 samples to confirm the different scaling between samples.
+
+``` r
+df2x2Melt <- reshape2::melt(df2by2)
+ggplot(df2x2Melt, aes(variable, log2(value))) +
+   geom_boxplot()
+```
+
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-10-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> They look about the same. It's interesting that it's actually the healthy samples (GTEX) that have genes of lower value than the cancer (TCGA) samples. And we look at the total FPKM across each of the 4 samples:
+
+``` r
+colSums(df2by2[2:5])
+```
+
+    ##      GTEX.ZV6S.1826.SM.5NQ8D      GTEX.ZPIC.1126.SM.5BC7F 
+    ##                     26062620                     30509361 
+    ## TCGA.LL.A441.01A.11R.A24H.07 TCGA.C8.A3M7.01A.12R.A21T.07 
+    ##                     21276988                     25223086
+
+And at least at the moment it does not appear that the cancer samples (TCGA) are normalized very differently than the healthy samples (GTEX).
 
 Looking at Variance vs Mean Expression for Genes
 ------------------------------------------------
-
-I'll need to look at a larger number of genes. I ran the script findCols.py to identify which Hardy=0 women 40-49 with healthy breast tissues were also in the Wang dataset. That gave me a file called gtex0\_cols.txt. From there, I subsetted the Wang breastrsemfpkmgtex.txt dataset.
-
-From the output gtex0\_cols.txt, I created the subsetting Wang file: $ cut -f1,2,3,4,19,26,34,35,39,57,58,60,62,63,64,65,69,77,78,82,86 breastrsemfpkmgtex.txt &gt; breastRSEMFPKM\_Hardy0.txt
 
 We'll now read in that file as a data frame and plot the variance vs mean across all genes Col1 (rowname) = Gene Name;Entrez\_ID combined Columns 2-20 are FPKM data across 19 samples.
 
@@ -218,7 +253,7 @@ require(dplyr)
 # by merging of Hugo_gene_name and Entrez ID (semicolon-separated), convert to tibble,
 # and remove those 2 columns
 colClasses = c("character", "integer", rep("numeric",19))
-dfHardy0 <- read.table("/Users/mjk/Desktop/Tresorit_iOS/projects/RNA-Seq/Breast_RNASeq_Data/breastRSEMFPKM_Hardy0.txt", sep="\t", stringsAsFactors = FALSE, colClasses = colClasses, header=T)
+dfHardy0 <- read.table("breastRSEMFPKM_Hardy0.txt", sep="\t", stringsAsFactors = FALSE, colClasses = colClasses, header=T)
 rownames(dfHardy0) <- paste(dfHardy0$Hugo_Symbol, dfHardy0$Entrez_Gene_Id, sep=";")
 dfHardy0 <- as.tbl(rownames_to_column(dfHardy0))
 dfHardy0 <- dfHardy0 %>% select(-Hugo_Symbol, -Entrez_Gene_Id)
@@ -241,7 +276,7 @@ ggplot(dfHardy0, aes(x=mean, y=variance)) +
    labs(title="Variance vs Mean of RNA-Seq of Genes across 19 Healthy Breast Samples (FPKM)")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-10-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We notice that the variance is much better controlled than earlier experiments where the variance was all over the place. See Molly Hammell's data <https://www.youtube.com/watch?v=_DorzGorOA0> at about 3/4 through the presentation where she compares Poisson vs Negative Binomial fitting.
 
@@ -257,10 +292,10 @@ ggplot(dfHardy0, aes(x=mean, y=cv)) +
    # xlim(c(0.01, 420000)) + ylim(c(0.01, 420000)) +
    scale_x_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
    scale_y_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
-   labs(title="Coefficient of Variation vs Mean FKPM of RNA-Seq of Genes across 19 Healthy Breast Samples (FPKM)")
+   labs(title="Coefficient of Variation vs Mean FKPM of RNA-Seq of Genes across\n19 Healthy Breast Samples (FPKM)")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-11-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-14-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 ### Interpretation
 
@@ -278,10 +313,11 @@ dfH0_HLCV <- melt(tmp)
 dfH0_HLCV$geneid <- dfH0_highLowCV$rowname         
 ggplot(dfH0_HLCV, aes(variable, value, group=factor(geneid))) +
    geom_line(aes(color=factor(geneid))) +
-   theme(axis.text.x = element_text(angle=90, hjust=1))
+   theme(axis.text.x = element_text(angle=90, hjust=1)) +
+   ylab("FPKM")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-12-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-15-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We can see from the figure above that the genes with very high CV have one or two samples with very elevated expression levels (SYTL2, VIT, RERGL, COLEC12, AQP3). We will want to include this type of pattern in our simulation below.
 
@@ -297,9 +333,15 @@ dfPair <- melt(dfPair[,1:20])                                              # mel
 ggplot(dfPair, aes(variable, value, group=factor(rowname))) +
    geom_line(aes(color=factor(dfPair$rowname))) +
    theme(axis.text.x = element_text(angle=90, hjust=1)) +
-   ylab("log2-expression normalized to mean")
+   ylab("log2-fold change (vs mean)")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-16-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
-We can see the large expression changes across samples of RASGRP1 compared to that of EMC8.
+We can see the large expression changes across samples of RASGRP1 compared to that of EMC8, as previously published.
+
+### Next:
+
+• Model healthy / cancer noise as a function of expression level.
+• Best way to show gene variability via fold-change.
+• Create simulation using new gene noise model.
