@@ -83,7 +83,7 @@ suppressMessages(grid.arrange(gHist$control, gHist$treatment, g2,nrow=3,
                               top=textGrob(main_title, gp=gpar(fontsize=15))))
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-4-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-4-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 The alternative hypothesis 'alt' transcripts above are all of interest--whether or not they can be detected. Yet, they are all on the verge of significance on a per-gene level, as their average value in the "treatment" samples is either -2 STDEV or +2 STDEV from their "control" sample values. These should yield a p-value of exactly 0.05 given an unlimited number of samples which would overcome the noisiness of the data.
 
@@ -127,7 +127,7 @@ suppressMessages(grid.arrange(gHist$control, gHist$treatment, g2, nrow=3,
                               top=textGrob(main_title, gp=gpar(fontsize=15))))
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-7-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> Now that we're looking at transcripts that change more substantially between treatment and controls samples, we see that we get good Power/FDR Performance with a few less sample replicates.
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-7-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> Now that we're looking at transcripts that change more substantially between treatment and controls samples, we see that we get good Power/FDR Performance with a few less sample replicates.
 
 This fact is due to better separation between the null-transcripts and the alt-transcripts, as viewed in the pair of histograms in the middle panel.
 
@@ -208,7 +208,7 @@ suppressMessages(grid.arrange(g1, g2, g3, g4, g5, g6, nrow=3,
                               top=textGrob("Sample Pair FPKM Scatter Plots",gp=gpar(fontsize=15))))
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 #### Interpretation
 
@@ -225,10 +225,12 @@ Let's look at the boxplots for these 4 samples to confirm the different scaling 
 ``` r
 df2x2Melt <- reshape2::melt(df2by2)
 ggplot(df2x2Melt, aes(variable, log2(value))) +
-   geom_boxplot()
+   geom_boxplot() +
+   theme(axis.text.x = element_text(angle=45)) +
+   ylab("log2(FPKM)") + xlab("sample name")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-10-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> They look about the same. It's interesting that it's actually the healthy samples (GTEX) that have genes of lower value than the cancer (TCGA) samples. And we look at the total FPKM across each of the 4 samples:
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-10-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> They look about the same. It's interesting that it's actually the healthy samples (GTEX) that have genes of lower value than the cancer (TCGA) samples. And we look at the total FPKM across each of the 4 samples:
 
 ``` r
 colSums(df2by2[2:5])
@@ -265,20 +267,130 @@ dfHardy0$sd <- sqrt(dfHardy0$variance)
 dfHardy0$cv <- dfHardy0$sd/dfHardy0$mean
 ```
 
-Next, we create a scatter plot of variance vs mean for each gene across these 19 healthy breast samples.
+Next, we create a scatter plot of STDEV(FPKM) vs mean(FPKM) for each gene across these 19 healthy breast samples. We also use loess() to perform local regression.
+
+The mean begins at about 0.03125 (2^-5) and goes to 524288 (2^19). We'd like to break that up into 30 intervals across a logarithm scale. So we'll break the mean into 30 intervals using 30 points. We'll use these intervals in a few minutes to show rough log-normality of noise about the line.
 
 ``` r
-ggplot(dfHardy0, aes(x=mean, y=variance)) +
+# create $Interval variable and breakpoints:
+intervals <- 2^(seq(-5,19,.8))
+dfHardy0$Intervals <- cut(dfHardy0$mean,intervals)
+breakpoints <- as.numeric(gsub(",", "", 
+                               gsub("]", "", str_extract(levels(dfHardy0$Intervals), regex("\\,\\S+")))))
+
+# plot the log-variance vs log-mean
+ggplot(dfHardy0, aes(x=mean, y=sd)) +
    geom_point(size=0.2) + 
-   # xlim(c(0.01, 420000)) + ylim(c(0.01, 420000)) +
-   scale_x_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
-   scale_y_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
-   labs(title="Variance vs Mean of RNA-Seq of Genes across 19 Healthy Breast Samples (FPKM)")
+   scale_x_continuous(trans = 'log2') + 
+   scale_y_continuous(trans = 'log2') + 
+   labs(title="Log(STDEV-FPKM) vs Log(Mean-FPKM) of RNA-Seq Expression (FPKM)\nof Genes across 19 Healthy Breast Samples") +
+   geom_smooth(method="loess", span=0.10) +
+   geom_vline(xintercept = breakpoints, colour="lightgrey")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
-We notice that the variance is much better controlled than earlier experiments where the variance was all over the place. [See Molly Hammell's data](https://youtu.be/_DorzGorOA0?t=3797) where she compares Poisson vs Negative Binomial fitting.
+We notice that the variance is much better controlled than earlier experiments where the variance was all over the place. [See Molly Hammell's data](https://youtu.be/_DorzGorOA0?t=3797) where she compares Poisson vs Negative Binomial fitting. Her data are presumably count data, which are ideally modeled by the Poisson or over-dispersed Poisson (Negative Binomial), and not yet transformed to FPKM.
+
+#### Collect mean vs stdev values
+
+We'd like an idea of this relationship to that we can use it in a Monte Carlo simulation. When I randomly select a mean-FPKM for a gene, I want to model its standard deviation, which will depend on its mean, as shown in the previous slide. Ideally, the standard deviation will be roughly log-normal. Let's test this idea by, for each log2(FPRK-Mean) interval (see verical grey lines in previous figure), the Distribution of STDEV(FPKM) across the 19 healthy breast samples is plotted.
+
+``` r
+ggplot(dfHardy0, aes(x=sqrt(variance))) +
+   geom_histogram() + scale_x_log10() +
+   facet_wrap(~Intervals, scales="free", ncol=4) +
+   labs(title="Distribution of STDEV(FPKM) for each Log2(Mean-FPKM) Interval")
+```
+
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-14-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> First, we see that at very high means, it's impossible to see a distribution. Beyond that, we see fairly good log-normality, which is still a bit right-skewed. I'll treat the variance of FPKM in each interval as normally distributed. We still need to calculate a mean and standard deviation for each FPKM-interval.
+
+#### Getting mean(variance) and SD(variance) for each interval
+
+``` r
+require(MASS)
+get.params <- function(z) with(fitdistr(z, "normal"),estimate[1:2])
+stdevs <- aggregate(sqrt(variance) ~ Intervals, dfHardy0, get.params)
+## this 'stdevs' df has mean(variance) and sd(variance) for each interval
+```
+
+Cancer Data (Randomly Selected 19 samples)
+------------------------------------------
+
+We start by randomly selecting 19 breast cancer samples (from 104), and calculating each gene's mean-FPKM and sd-FPKM.
+
+``` r
+set.seed(3325)
+brcaIdx <- sample(2:ncol(dfBrca), 19, replace = FALSE)
+dfBrca19 <- dfBrca[c(1,brcaIdx)]
+dfBrca19$mean <- rowMeans(dfBrca19[2:20])
+dfBrca19$sd <- rowSds(dfBrca19[2:20])
+```
+
+#### Plotting Log2\[SD-FPKM\] vs Log2\[Mean-FPKM\]
+
+``` r
+# create $Interval variable and breakpoints:
+intervals <- 2^(seq(-5,19,.8))
+dfBrca19$Intervals <- cut(dfBrca19$mean,intervals)
+breakpoints <- as.numeric(gsub(",", "", 
+                               gsub("]", "", str_extract(levels(dfBrca19$Intervals), regex("\\,\\S+")))))
+
+# plot the log-sd vs log-mean
+ggplot(dfBrca19, aes(x=mean, y=sd)) +
+   geom_point(size=0.2) + 
+   scale_x_continuous(trans = 'log2') + 
+   scale_y_continuous(trans = 'log2') + 
+   labs(title="Log(STDEV-FPKM) vs Log(Mean-FPKM) of RNA-Seq Expression (FPKM)\nof Genes across 19 Breast Cancer Samples") +
+   geom_smooth() +
+   geom_vline(xintercept = breakpoints, colour="lightgrey")
+```
+
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-17-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> The plot is looking very similar to the log2\[sd\] vs log2\[mean\] plot for healthy samples. The slope looks higher, but I believe that is only due to a few outlier points and the automatic selection of x- and y-axis scales.
+
+#### Plotting STDEV Histograms across bins of log\[mean-FPKM\]
+
+``` r
+ggplot(dfBrca19, aes(x=sd)) +
+   geom_histogram() + scale_x_log10() +
+   facet_wrap(~Intervals, scales="free", ncol=4) +
+   labs(title="Distribution of STDEV(FPKM) for each Log2(Mean-FPKM) Interval")
+```
+
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-18-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> \#\#\#\# Getting mean(variance) and SD(variance) for each interval
+
+``` r
+require(MASS)
+get.params <- function(z) with(fitdistr(z, "normal"),estimate[1:2])
+stdevsBrca <- aggregate(sd ~ Intervals, dfBrca19, get.params)
+## this 'stdevs' df has mean(variance) and sd(variance) for each interval
+```
+
+#### Checking Cancer Diagnosis of 19 samples
+
+colnames(dfBrca19) "TCGA.5T.A9QA.01A.11R.A41B.07" Infiltrating duct mixed with other types of carcinoma, black woman. \[3\] "TCGA.AN.A0AJ.01A.11R.A00Z.07" Infiltrating duct and lobular carcinoma, white woman 79 years old at diagnosis, Alive. "TCGA.LL.A441.01A.11R.A24H.07" Infiltrating duct carcinoma, NOS, black woman, 62 years old at diagnosis. Alive. Tumor Stage 1A. \[5\] "TCGA.BH.A0B2.01A.11R.A10J.07.1" Demographic and Diagonosis unknown. "TCGA.B6.A0WS.01A.11R.A115.07" Infiltrating duct carcinoma, NOS, white woman, 58 years old at diagnosis. Alive. Tumor Stage IIA. \[7\] "TCGA.GM.A2DN.01A.11R.A180.07" Infiltrating duct carcinoma, NOS, white non-hispanic woman, 58 years old at diagnosis. Alive. Tumor Stage IIA. "TCGA.EW.A3U0.01A.11R.A22K.07"
+\[9\] "TCGA.E9.A2JS.01A.11R.A180.07"
+"TCGA.BH.A18I.01A.11R.A12D.07"
+\[11\] "TCGA.A2.A0YC.01A.11R.A109.07"
+"TCGA.AR.A254.01A.21R.A169.07"
+\[13\] "TCGA.D8.A27N.01A.11R.A16F.07"
+"TCGA.AR.A24R.01A.11R.A169.07"
+\[15\] "TCGA.EW.A1P4.01A.21R.A144.07"
+"TCGA.E9.A1N3.01A.12R.A157.07"
+\[17\] "TCGA.A2.A0CL.01A.11R.A115.07" Infiltrating duct carcinoma, NOS. Black woman "TCGA.E2.A14P.01A.31R.A12D.07"
+\[19\] "TCGA.B6.A1KN.01A.11R.A13Q.07"
+"TCGA.BH.A0B8.01A.21R.A056.07"
+
+*This data can be accessed via Bioconductor using the GenomicDataCommons package*
+
+#### Might be more interesting to plot 30 Histograms together
+
+#### I should model genes that look like they change across studies
+
+#### I should confirm that all TCGA samples are indeed cancer samples.
+
+Modeling Realistic Data
+-----------------------
 
 It will be interesting to compare this to the cancer samples.
 
@@ -292,10 +404,11 @@ ggplot(dfHardy0, aes(x=mean, y=cv)) +
    # xlim(c(0.01, 420000)) + ylim(c(0.01, 420000)) +
    scale_x_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
    scale_y_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
-   labs(title="Coefficient of Variation vs Mean FKPM of RNA-Seq of Genes across\n19 Healthy Breast Samples (FPKM)")
+   labs(title="Coefficient of Variation vs Mean FKPM of RNA-Seq of Genes across\n19 Healthy Breast Samples (FPKM)") +
+   geom_smooth(method="loess", span=0.1)
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-14-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-20-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 ### Interpretation
 
@@ -317,7 +430,7 @@ ggplot(dfH0_HLCV, aes(variable, value, group=factor(geneid))) +
    ylab("FPKM")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-15-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-21-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We can see from the figure above that the genes with very high CV have one or two samples with very elevated expression levels (SYTL2, VIT, RERGL, COLEC12, AQP3). We will want to include this type of pattern in our simulation below.
 
@@ -336,7 +449,7 @@ ggplot(dfPair, aes(variable, value, group=factor(rowname))) +
    ylab("log2-fold change (vs mean)")
 ```
 
-<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-16-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-22-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We can see the large expression changes across samples of RASGRP1 compared to that of EMC8, as previously published.
 
