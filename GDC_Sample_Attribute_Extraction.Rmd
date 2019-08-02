@@ -1,6 +1,8 @@
 ---
-title: "Extracting Demographic and Diagnostic Sample Data from GDC"
+title: "Extracting Demographic and Diagnostic Sample Data from NCI's Genomic Data Commons (GDC)"
 author: "Michael Kesling"
+header-includes:
+   - \usepackage{bbm}    # not helping LaTex
 date: "7/25/2019"
 output: rmarkdown::github_document # html_document
 ---
@@ -9,8 +11,7 @@ output: rmarkdown::github_document # html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 ```
-
-## Extracting Demographic and Diagnostic Data from NCI's Genomic Data Commons (GDC)
+### Document in Progress
 
 In order to correctly select the pertinent RNA-Seq samples from TCGA project, it's necessary to 
 access data about the samples from the NCI's Genomic Data Commons (GDC), where the data are now
@@ -20,11 +21,14 @@ An Bioconductor package named 'GenomicDataCommons' is utilized here in order to 
 then extract the relevant fields of sample attributes.  The 'BiocManager' package must first be
 installed in order to install bioconductor packages.
 
+#### Note:
+Some of the code is not shown on the GitHub website.  One needs to look at the .RMD file
 
-```{r}
+```{r, include=FALSE}
 # BiocManager::install('GenomicDataCommons')     # already installed on my machine
+suppressMessages(require(XVector))
 suppressMessages(require(GenomicDataCommons))
-suppressMessages(require(dplyr))
+#suppressMessages(require(dplyr))
 suppressMessages(require(knitr))
 ```
 
@@ -47,11 +51,11 @@ While other fields in the TCGA identifier may be important, the "TSS", "Particip
 
 #### Exploring GDC Sample Attributes
 
-We are going to follow the ![Vignette for the GenomicDataCommons package](https://bioconductor.org/packages/release/bioc/vignettes/GenomicDataCommons/inst/doc/overview.html).
+We are going to follow the [Vignette for the GenomicDataCommons package](https://bioconductor.org/packages/release/bioc/vignettes/GenomicDataCommons/inst/doc/overview.html).
 
-As the sample attributes of $Demographics$ and $Diagnostics$ all fall under the umbrella of the $cases$, we'll access our data through the $GenomicDataCommons$ function $cases()$.
+As the sample attributes of *Demographics* and *Diagnostics* all fall under the umbrella of the *cases*, we'll access our data through the *GenomicDataCommons* function *cases()*.
 
-Let's start out by simply asking how many different $cases$ are stored by GDC:
+Let's start out by simply asking how many different *cases* are stored by GDC:
 ```{r}
 cases() %>% count()
 ```
@@ -60,47 +64,126 @@ We see that there are over 34,000 cases as of July 2019.
 #### Identifying Breast Cancer Project ID
 As we're focusing on breast cancer, and the samples are grouped into projects according to the type of cancer, we'll need to determine the correct identifier for subsetting all cases by those involving breast cancer.
 
-First, we need to determine the exact field and identifier for the $Project ID$.  We'll use the $grep()$ function to try and find that field.
+First, we need to determine the exact field and identifier for the *Project ID*.  We'll use the *grep()* function to try and find that field.
 ```{r}
-project_fields <- grep('pro', available_fields('cases'), value=TRUE)
+project_fields <- grep('proj', available_fields('cases'), value=TRUE)
 print(project_fields)
 ```
-It appears that the exact field name is "project.project_id".
+It appears that the exact field name is *project.project_id*.
 Let's determine what value a project ID would have for a breast cancer sample.
 ```{r}
-cases() %>%
+projClasses <- cases() %>%
    facet('project.project_id') %>%  
-   aggregations() %>%
-   head(5)
+   aggregations()
+head(projClasses$project.project_id)
 ```
 We can see that one of the most popular entries under 'project_id' is 'TCGA-BRCA', giving 1098 cases as of July 2019.  We will focus on this dataset going forward.
 
-#### Identifying TCGA identifier
+#### Identifying TCGA identifier and Downloading Sample Data
 We need to ensure that for the breast cancer sample attributes we download, that there is a TCGA ID related to the case number.  We'll need that for identifying the right RNA-Seq identifiers later on.
 
-We start by figuring out what the 'case id' might be called in GDC. We $grep()$ for 'case':
+The 'case_id' is needed for joining data across tables or object, but its format is not in the TCGA
+format.  e.g. `87b85935-a058-44ad-8fb6-8511130eaffe`
+
+We start by figuring out what the 'sample_id' might be called in GDC. We $grep()$ for 'case':
 ```{r}
-case_fields <- grep('case', available_fields('cases'), value=TRUE)
-print(case_fields)
+sample_fields <- grep('sample_id', available_fields('cases'), value=TRUE)
+print(sample_fields)
 ```
-XXXXXXXXX
-XXXXXXXXX
-There are quite a few options from which to choose the right identifier.  More than one identifier will serve our purpose, as long as it begins with $TCGA$, and contains the $TSS$, $Participant$, and $Sample$ fields.
-It appears that 'submitter_sample_ids' will suffice for our purpose
+More than one identifier will serve our purpose, as long as it begins with *TCGA*, and contains the *TSS*, *Participant*, and *Sample* fields.
+Based on iterating through this code previously, it was found that *submitter_sample_ids* will suffice for our purpose, as shown with the following code.  We are going to pull all the sample attribute data that we'll need, and we'll look at it step-by-step below, starting with the *submitter_sample_ids*.
+```{r}
+expands = c("diagnoses","annotations",
+            "demographic","exposures")
+brcaResults <- cases() %>%
+   GenomicDataCommons::filter(~ project.project_id == 'TCGA-BRCA') %>%
+   GenomicDataCommons::select("submitter_sample_ids") %>%
+   GenomicDataCommons::expand(expands)   %>%
+   response_all()
+print(head(brcaResults$results$submitter_sample_ids, n=2))
+```
+IN addition to the 2 printed examples of *case_id* -> *submitter_sample_id* mapping, another one of interest is:
+
+$`f06f09f3-8133-4a92-ac86-fbe64295e0d8`
+[1] "TCGA-E9-A1ND-10A" "TCGA-E9-A1ND-01Z" "TCGA-E9-A1ND-01A" "TCGA-E9-A1ND-11A"
+
+The *case_id* begins with 'f06f...'
+We see that it maps to 4 distinct *submitter_sample_id*s.  Each one begins with 'TCGA-E9-A1ND'.
+"E9" is the code for the "Breast Invasive Carcinoma" study at the Asterand site.
+"A1ND" is the patient/participant code for that study.  We notice that these values are the same for all 4 *submitter_sample_id* codes, which says that all 4 samples were generated from the same patient.
+2 of the sample_code fields are "01Z" and "01A".  01 refers to a "Primary Solid Tumor", and A and Z refer to the fact that these are 2 separate samples.  I assume that are labeled A and Z (rather than A and B) because they are the 1st and 2nd Primary Solid Tumors out of a total of 2 (rather than the 1st and 2nd out of several).
+We also notice that this patient has 2 other samples whose sample type is 10 = "Blood-Derived Normal Cell" and 11 = "Solid Tissue Normal".  That means that 2 non-cancerous controls were taken from this patient, in addition to the 2 primary solid tumor samples taken.
+
+#### Exploring *brcaResults* Data Object
+brcaResults is the name of the GDCcasesResponse object, which is fundamentally a list, that was returned from the data query to GDC.
+We'd like to understand how the *demographic*, *diagnostic*, *exposure*, and *annotations* objects are organized.
+```{r}
+dem <- class(brcaResults$results$demographic)
+diag <- class(brcaResults$results$diagnoses)      # list of data.frames
+annot <- class(brcaResults$results$annotations)    # list. sparsely populated -- won't use
+exp <- class(brcaResults$results$exposures) 
+print(c("demographic ->", dem, "diagnostic ->", diag, "exposures -> ", exp, "annotations -> ", annot))
+```
+We can see that *demographic* is a data frame. (It contains the demographic data directly.)
+Right now, we'll explore how the *annotations* and *diagnoses* lists are laid out, and how sparse they are.
+
+```{r}
+lists <- c("brcaResults$results$annotations", "brcaResults$results$diagnoses")
+for(listName in lists){
+   numAnnotNull <- 0
+   resNum <- 0
+   for(result in eval(parse(text=listName))){
+      resNum = resNum+ 1
+      if(is.null(result)){
+         numAnnotNull = numAnnotNull + 1
+      }
+   }
+   print(paste("The fraction of the ", listName, " list records that are empty is ", numAnnotNull/resNum))
+}
+
+```
+Clearly, the *annotations* list is almost completely empty, so we'll want to ignore it for this work, while the *diagnoses* list is almost entirely populated and we'll want to use it.
+
+The structure of the *exposures* list of dataframes is a bit different.  Let's see how well it's populated:
+```{r}
+# TO BE DONE
+
+```
+
 
 #### Exploring Sub-Classes of Breast cancer
 We select out only those cases that are breast cancer and see what data are available to us:
 
 ```{r}
-cases() %>%
-   GenomicDataCommons::filter( ~ project.project_id == 'TCGA-BRCA') %>%   # '~' needed
-   aggregations() %>%
-   head(5)
+brcaResults$results$diagnoses$`87b85935-a058-44ad-8fb6-8511130eaffe`
+```
+
+We see that 'Ductal and Lobular Neoplasms' cover almost all cases.  Ignoring other cases will help reduce confusion in our later analysis.
+
+#### Pulling Breast Cancer sample attribute data
+```{r}
+expands = c("diagnoses","annotations",
+            "demographic","exposures")
+brcaResults <- cases() %>%
+   GenomicDataCommons::filter(~ project.project_id == 'TCGA-BRCA') %>%
+   GenomicDataCommons::select("submitter_sample_ids") %>%
+   GenomicDataCommons::expand(expands)   %>%
+   response_all()
 ```
 
 
+#### Exploring Local $brcaResults$ Data Object
+The $brcaResults$ object that we've just downloaded contains data from the 'diagnoses', 'annotations', 'demographic', and 'exposures'.  We need to look at what each one of these 4 contains in order to figure out if:
+(1) Do a large proportion of the cases have populated the data fields in the relevant object?  If not, then while that data might be of strong interest, using it would likely cause a strong bias in the samples we select.
+(2) Among well-populated objects, which fields do we want to focus on?
 
-
+#### Structure and Fields in $demographic$ Object
+We begin by looking at the structure and the various data fields in the $demographic$ object.
+```{r}
+class(brcaResults$results$demographic)
+colnames(brcaResults$results$demographic)
+```
+We see that the *demographic* object is a data frame, and that it contains 14 data fields.  Of those, we're going to be interested in *race*, *days_to_birth*, *ethnicity*, *vital_status*, *age_at_index*, *days_to_death*, *year_of_birth*, and *year_of_death*.
 
 
 

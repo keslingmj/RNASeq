@@ -1,4 +1,4 @@
 Label	Identifier_for	Value	Value_Description	Possible_Values
 TSS	Tissue Source Site	2	GBM (brain tumor) sample from MD Anderson	see https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/tissue-source-site-codes for complete list
 Participant	Study Participant (Patient)	14	The 14th participant from the GBM Study of MD Anderson	Any alph-numeric value
-Sample	Sample Type	1	A solid tumor	"Tumor types range from 01-09, normal types from 10-19, and control samples from 20-29.  See https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/"
+Sample	Sample Type	1	A solid tumor	"Tumor types range from 01-09, normal types from 10-19, and control samples from 20-29.  See https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes"
