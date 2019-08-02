@@ -1,6 +1,6 @@
 Effect of Sample Replicates on Statistical Power and False Discovery Rates Using Simulated RNA-Seq Data
 ================
-Michael Kesling, michael dot kesling at alumni dot stanford <dot> edu
+Michael Kesling, michael dot kesling /at alumni dot stanford /. edu
 
 FDR, Power, and Benjamini-Hochberg
 ----------------------------------
@@ -83,7 +83,7 @@ suppressMessages(grid.arrange(gHist$control, gHist$treatment, g2,nrow=3,
                               top=textGrob(main_title, gp=gpar(fontsize=15))))
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-4-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-4-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 The alternative hypothesis 'alt' transcripts above are all of interest--whether or not they can be detected. Yet, they are all on the verge of significance on a per-gene level, as their average value in the "treatment" samples is either -2 STDEV or +2 STDEV from their "control" sample values. These should yield a p-value of exactly 0.05 given an unlimited number of samples which would overcome the noisiness of the data.
 
@@ -127,7 +127,7 @@ suppressMessages(grid.arrange(gHist$control, gHist$treatment, g2, nrow=3,
                               top=textGrob(main_title, gp=gpar(fontsize=15))))
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-7-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> Now that we're looking at transcripts that change more substantially between treatment and controls samples, we see that we get good Power/FDR Performance with a few less sample replicates.
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-7-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> Now that we're looking at transcripts that change more substantially between treatment and controls samples, we see that we get good Power/FDR Performance with a few less sample replicates.
 
 This fact is due to better separation between the null-transcripts and the alt-transcripts, as viewed in the pair of histograms in the middle panel.
 
@@ -208,7 +208,7 @@ suppressMessages(grid.arrange(g1, g2, g3, g4, g5, g6, nrow=3,
                               top=textGrob("Sample Pair FPKM Scatter Plots",gp=gpar(fontsize=15))))
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-8-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 #### Interpretation
 
@@ -230,7 +230,7 @@ ggplot(df2x2Melt, aes(variable, log2(value))) +
    ylab("log2(FPKM)") + xlab("sample name")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-10-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> They look about the same. It's interesting that it's actually the healthy samples (GTEX) that have genes of lower value than the cancer (TCGA) samples. And we look at the total FPKM across each of the 4 samples:
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-10-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> They look about the same. It's interesting that it's actually the healthy samples (GTEX) that have genes of lower value than the cancer (TCGA) samples. And we look at the total FPKM across each of the 4 samples:
 
 ``` r
 colSums(df2by2[2:5])
@@ -288,7 +288,7 @@ ggplot(dfHardy0, aes(x=mean, y=sd)) +
    geom_vline(xintercept = breakpoints, colour="lightgrey")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-13-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We notice that the variance is much better controlled than earlier experiments where the variance was all over the place. [See Molly Hammell's data](https://youtu.be/_DorzGorOA0?t=3797) where she compares Poisson vs Negative Binomial fitting. Her data are presumably count data, which are ideally modeled by the Poisson or over-dispersed Poisson (Negative Binomial), and not yet transformed to FPKM.
 
@@ -303,7 +303,7 @@ ggplot(dfHardy0, aes(x=sqrt(variance))) +
    labs(title="Distribution of STDEV(FPKM) for each Log2(Mean-FPKM) Interval")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-14-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> First, we see that at very high means, it's impossible to see a distribution. Beyond that, we see fairly good log-normality, which is still a bit right-skewed. I'll treat the variance of FPKM in each interval as normally distributed. We still need to calculate a mean and standard deviation for each FPKM-interval.
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-14-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> First, we see that at very high means, it's impossible to see a distribution. Beyond that, we see fairly good log-normality, which is still a bit right-skewed. I'll treat the variance of FPKM in each interval as normally distributed. We still need to calculate a mean and standard deviation for each FPKM-interval.
 
 #### Getting mean(variance) and SD(variance) for each interval
 
@@ -346,7 +346,7 @@ ggplot(dfBrca19, aes(x=mean, y=sd)) +
    geom_vline(xintercept = breakpoints, colour="lightgrey")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-17-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> The plot is looking very similar to the log2\[sd\] vs log2\[mean\] plot for healthy samples. The slope looks higher, but I believe that is only due to a few outlier points and the automatic selection of x- and y-axis scales.
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-17-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> The plot is looking very similar to the log2\[sd\] vs log2\[mean\] plot for healthy samples. The slope looks higher, but I believe that is only due to a few outlier points and the automatic selection of x- and y-axis scales.
 
 #### Plotting STDEV Histograms across bins of log\[mean-FPKM\]
 
@@ -357,7 +357,7 @@ ggplot(dfBrca19, aes(x=sd)) +
    labs(title="Distribution of STDEV(FPKM) for each Log2(Mean-FPKM) Interval")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-18-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> \#\#\#\# Getting mean(variance) and SD(variance) for each interval
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-18-1.png" width="90%" height="90%" style="display: block; margin: auto;" /> \#\#\#\# Getting mean(variance) and SD(variance) for each interval
 
 ``` r
 require(MASS)
@@ -408,7 +408,7 @@ ggplot(dfHardy0, aes(x=mean, y=cv)) +
    geom_smooth(method="loess", span=0.1)
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-20-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-20-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 ### Interpretation
 
@@ -430,7 +430,7 @@ ggplot(dfH0_HLCV, aes(variable, value, group=factor(geneid))) +
    ylab("FPKM")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-21-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-21-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We can see from the figure above that the genes with very high CV have one or two samples with very elevated expression levels (SYTL2, VIT, RERGL, COLEC12, AQP3). We will want to include this type of pattern in our simulation below.
 
@@ -449,7 +449,7 @@ ggplot(dfPair, aes(variable, value, group=factor(rowname))) +
    ylab("log2-fold change (vs mean)")
 ```
 
-<img src="FDR_and_Replicates2_files/figure-markdown_github/unnamed-chunk-22-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+<img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-22-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
 
 We can see the large expression changes across samples of RASGRP1 compared to that of EMC8, as previously published.
 
