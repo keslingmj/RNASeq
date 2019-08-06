@@ -39,7 +39,7 @@ As the sample attributes of *Demographics* (characteristics of the human patient
 Let's start out by simply asking how many different *cases* are stored by GDC:
 
 ``` r
-cases() %>% count()
+GenomicDataCommons::cases() %>% GenomicDataCommons::count()
 ```
 
     ## [1] 34893
@@ -191,6 +191,164 @@ print(paste("The fraction of the exposures records that are empty is ", numAnnot
     ## [1] "The fraction of the exposures records that are empty is  1"
 
 So clearly the *exposures* list has no useful information.
+
+#### Selecting Relevant Fields in *demographic* and *diagnoses* data objects
+
+Now that we've decided to not use the *annotations* and *exposures* data lists, we'll see what fields in the *demographic* and *diagnoses* objects we might be interested in.
+
+Let's see what fields are available in the *demographic* data frame:
+
+``` r
+colnames(brcaResults$results$demographic)
+```
+
+    ##  [1] "updated_datetime" "created_datetime" "gender"          
+    ##  [4] "state"            "submitter_id"     "year_of_birth"   
+    ##  [7] "race"             "days_to_birth"    "ethnicity"       
+    ## [10] "vital_status"     "demographic_id"   "age_at_index"    
+    ## [13] "year_of_death"    "days_to_death"
+
+As we're interested in characteristics about the patients and not the time when the data were entered into the GDC database, we'll subset these fields and look at the first few rows in tibble format.
+
+``` r
+importantDemographicFields <- c("gender", "race", "days_to_birth", "ethnicity", "vital_status", "age_at_index", "days_to_death", "year_of_birth", "year_of_death")
+as_tibble(brcaResults$results$demographic)[importantDemographicFields]
+```
+
+    ## # A tibble: 1,098 x 9
+    ##    gender race  days_to_birth ethnicity vital_status age_at_index
+    ##    <chr>  <chr>         <int> <chr>     <chr>               <int>
+    ##  1 female white        -30830 not hisp… Alive                  84
+    ##  2 female white        -19822 not hisp… Alive                  54
+    ##  3 female blac…        -13982 not hisp… Dead                   38
+    ##  4 female white        -26941 not hisp… Dead                   73
+    ##  5 female white        -17624 not hisp… Dead                   48
+    ##  6 female white        -26423 not hisp… Alive                  72
+    ##  7 female not …        -29370 not repo… Alive                  80
+    ##  8 female white        -22788 not hisp… Alive                  62
+    ##  9 female white        -22683 not hisp… Alive                  62
+    ## 10 female white        -30125 not repo… Alive                  82
+    ## # … with 1,088 more rows, and 3 more variables: days_to_death <int>,
+    ## #   year_of_birth <int>, year_of_death <int>
+
+We can see that these fields are all important, and we can also deduce that "age\_at\_index" refers to the age at which the patient was diagnosed with breast cancer. The 4th patient in the output above was born in 1921, was 73 years old at "age\_at\_index", had 3126 days\_to\_death (3126/365=8.5 years), and died in 2002. 1921 + 73 + 8.5 = 2002.5.
+
+Now let's look at what fields in *diagnoses* might be of interest.
+
+``` r
+colnames(brcaResults$results$diagnoses$`87b85935-a058-44ad-8fb6-8511130eaffe`)
+```
+
+    ##  [1] "year_of_diagnosis"                
+    ##  [2] "classification_of_tumor"          
+    ##  [3] "last_known_disease_status"        
+    ##  [4] "updated_datetime"                 
+    ##  [5] "primary_diagnosis"                
+    ##  [6] "submitter_id"                     
+    ##  [7] "tumor_stage"                      
+    ##  [8] "age_at_diagnosis"                 
+    ##  [9] "morphology"                       
+    ## [10] "days_to_last_known_disease_status"
+    ## [11] "created_datetime"                 
+    ## [12] "prior_treatment"                  
+    ## [13] "state"                            
+    ## [14] "days_to_recurrence"               
+    ## [15] "diagnosis_id"                     
+    ## [16] "tumor_grade"                      
+    ## [17] "icd_10_code"                      
+    ## [18] "days_to_diagnosis"                
+    ## [19] "tissue_or_organ_of_origin"        
+    ## [20] "progression_or_recurrence"        
+    ## [21] "prior_malignancy"                 
+    ## [22] "synchronous_malignancy"           
+    ## [23] "site_of_resection_or_biopsy"      
+    ## [24] "days_to_last_follow_up"
+
+Of these *diagnoses* fields, we'll use the following:
+"primary\_diagnosis",
+"tumor\_stage",
+"age\_at\_diagnosis",
+"morphology",
+"prior\_treatment",
+"days\_to\_recurrence",
+"tissue\_or\_organ\_of\_origin",
+"prior\_malignancy".
+
+tumor\_grade is not reported and 'icd\_10\_code' is always C50.9, so they won't be used.
+
+``` r
+as_tibble(brcaResults$results$diagnoses$`87b85935-a058-44ad-8fb6-8511130eaffe`)
+```
+
+    ## # A tibble: 1 x 24
+    ##   year_of_diagnos… classification_… last_known_dise… updated_datetime
+    ##              <int> <chr>            <chr>            <chr>           
+    ## 1             2010 not reported     not reported     2019-05-01T12:1…
+    ## # … with 20 more variables: primary_diagnosis <chr>, submitter_id <chr>,
+    ## #   tumor_stage <chr>, age_at_diagnosis <int>, morphology <chr>,
+    ## #   days_to_last_known_disease_status <lgl>, created_datetime <lgl>,
+    ## #   prior_treatment <chr>, state <chr>, days_to_recurrence <lgl>,
+    ## #   diagnosis_id <chr>, tumor_grade <chr>, icd_10_code <chr>,
+    ## #   days_to_diagnosis <int>, tissue_or_organ_of_origin <chr>,
+    ## #   progression_or_recurrence <chr>, prior_malignancy <chr>,
+    ## #   synchronous_malignancy <chr>, site_of_resection_or_biopsy <chr>,
+    ## #   days_to_last_follow_up <int>
+
+``` r
+importantDiagnosisFields <- c("primary_diagnosis", "tumor_stage", "age_at_diagnosis", "morphology", "prior_treatment", "days_to_recurrence", "tumor_grade", "icd_10_code", "tissue_or_organ_of_origin", "prior_malignancy")
+
+brcaSampleIDs1098 <- names(brcaResults$results$diagnoses)
+brcaResults$results$diagnoses[brcaSampleIDs1098[1]]
+```
+
+    ## $`87b85935-a058-44ad-8fb6-8511130eaffe`
+    ##   year_of_diagnosis classification_of_tumor last_known_disease_status
+    ## 1              2010            not reported              not reported
+    ##                   updated_datetime       primary_diagnosis
+    ## 1 2019-05-01T12:11:55.653591-05:00 Mucinous adenocarcinoma
+    ##             submitter_id tumor_stage age_at_diagnosis morphology
+    ## 1 TCGA-D8-A1XV_diagnosis   stage iia            30830     8480/3
+    ##   days_to_last_known_disease_status created_datetime prior_treatment
+    ## 1                                NA               NA              No
+    ##      state days_to_recurrence                         diagnosis_id
+    ## 1 released                 NA 47afa2cf-09ad-584f-8814-b81422d96f4f
+    ##    tumor_grade icd_10_code days_to_diagnosis tissue_or_organ_of_origin
+    ## 1 not reported       C50.9                 0               Breast, NOS
+    ##   progression_or_recurrence prior_malignancy synchronous_malignancy
+    ## 1              not reported               no                     No
+    ##   site_of_resection_or_biopsy days_to_last_follow_up
+    ## 1                 Breast, NOS                    461
+
+``` r
+diagnostics <- brcaResults$results$diagnoses[[brcaSampleIDs1098[1]]][importantDiagnosisFields]
+sampleId <- c(brcaSampleIDs1098[[1]])
+for(id in brcaSampleIDs1098[2:length(brcaSampleIDs1098)]){
+   record <- brcaResults$results$diagnoses[[id]][importantDiagnosisFields]
+   if(!is.null(record)){           # handles NULL record
+      diagnostics <- rbind(diagnostics, record)
+      sampleId <- c(sampleId, id)
+   }
+}
+diagnostics <- cbind(sampleId, diagnostics)
+as_tibble(diagnostics)
+```
+
+    ## # A tibble: 1,097 x 11
+    ##    sampleId primary_diagnos… tumor_stage age_at_diagnosis morphology
+    ##    <fct>    <chr>            <chr>                  <int> <chr>     
+    ##  1 87b8593… Mucinous adenoc… stage iia              30830 8480/3    
+    ##  2 dd96a9c… Infiltrating du… stage iib              19822 8500/3    
+    ##  3 3f834fa… Lobular carcino… stage iiia             13982 8520/3    
+    ##  4 451e1a6… Infiltrating du… not report…            26941 8522/3    
+    ##  5 178b2c4… Infiltrating du… not report…            17624 8500/3    
+    ##  6 dddd8e2… Infiltrating du… stage iia              26423 8500/3    
+    ##  7 7b605fb… Infiltrating du… stage iia              29370 8500/3    
+    ##  8 8744733… Infiltrating du… stage iiia             22788 8500/3    
+    ##  9 115bc72… Infiltrating du… stage iia              22683 8500/3    
+    ## 10 aeb6a3a… Infiltrating du… stage i                30125 8500/3    
+    ## # … with 1,087 more rows, and 6 more variables: prior_treatment <chr>,
+    ## #   days_to_recurrence <lgl>, tumor_grade <chr>, icd_10_code <chr>,
+    ## #   tissue_or_organ_of_origin <chr>, prior_malignancy <chr>
 
 #### Exploring Sub-Classes of Breast cancer
 

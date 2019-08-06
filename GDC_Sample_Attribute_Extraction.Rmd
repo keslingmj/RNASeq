@@ -26,6 +26,7 @@ Some of the code is not shown on the GitHub website.  One needs to look at the [
 # BiocManager::install('GenomicDataCommons')     # already installed on my machine
 suppressMessages(require(GenomicDataCommons))
 suppressMessages(require(knitr))
+suppressMessages(require(dplyr))
 ```
 
 ## Understanding TCGA Identifiers
@@ -50,7 +51,7 @@ As the sample attributes of *Demographics* (characteristics of the human patient
 
 Let's start out by simply asking how many different *cases* are stored by GDC:
 ```{r}
-cases() %>% count()
+GenomicDataCommons::cases() %>% GenomicDataCommons::count()
 ```
 We see that there are over 34,000 cases as of July 2019.
 
@@ -159,8 +160,53 @@ print(paste("The fraction of the exposures records that are empty is ", numAnnot
 So clearly the *exposures* list has no useful information.
 
 #### Selecting Relevant Fields in *demographic* and *diagnoses* data objects
-Now that we've decided to not use the *attributes* and *exposures* data lists, we'll see what fields in the *demographic* and *diagnoses* objects we might be interested in.
+Now that we've decided to not use the *annotations* and *exposures* data lists, we'll see what fields in the *demographic* and *diagnoses* objects we might be interested in.  
 
+Let's see what fields are available in the *demographic* data frame:
+```{r}
+colnames(brcaResults$results$demographic)
+```
+As we're interested in characteristics about the patients and not the time when the data were entered into the GDC database, we'll subset these fields and look at the first few rows in tibble format.
+```{r}
+importantDemographicFields <- c("gender", "race", "days_to_birth", "ethnicity", "vital_status", "age_at_index", "days_to_death", "year_of_birth", "year_of_death")
+as_tibble(brcaResults$results$demographic)[importantDemographicFields]
+```
+We can see that these fields are all important, and we can also deduce that "age_at_index" refers to the age at which the patient was diagnosed with breast cancer.  The 4th patient in the output above was born in 1921, was 73 years old at "age_at_index", had 3126 days_to_death (3126/365=8.5 years), and died in 2002.  1921 + 73 + 8.5 = 2002.5.  
+
+Now let's look at what fields in *diagnoses* might be of interest.
+```{r}
+colnames(brcaResults$results$diagnoses$`87b85935-a058-44ad-8fb6-8511130eaffe`)
+```
+Of these *diagnoses* fields, we'll use the following:  
+"primary_diagnosis",  
+"tumor_stage",  
+"age_at_diagnosis",  
+"morphology",  
+"prior_treatment",  
+"days_to_recurrence",  
+"tissue_or_organ_of_origin",  
+"prior_malignancy".  
+
+'tumor_grade' is not reported and 'icd_10_code' is always C50.9, so they won't be used.
+```{r}
+as_tibble(brcaResults$results$diagnoses$`87b85935-a058-44ad-8fb6-8511130eaffe`)
+importantDiagnosisFields <- c("primary_diagnosis", "tumor_stage", "age_at_diagnosis", "morphology", "prior_treatment", "days_to_recurrence", "tumor_grade", "icd_10_code", "tissue_or_organ_of_origin", "prior_malignancy")
+
+brcaSampleIDs1098 <- names(brcaResults$results$diagnoses)
+brcaResults$results$diagnoses[brcaSampleIDs1098[1]]
+
+diagnostics <- brcaResults$results$diagnoses[[brcaSampleIDs1098[1]]][importantDiagnosisFields]
+sampleId <- c(brcaSampleIDs1098[[1]])
+for(id in brcaSampleIDs1098[2:length(brcaSampleIDs1098)]){
+   record <- brcaResults$results$diagnoses[[id]][importantDiagnosisFields]
+   if(!is.null(record)){           # handles NULL record
+      diagnostics <- rbind(diagnostics, record)
+      sampleId <- c(sampleId, id)
+   }
+}
+diagnostics <- cbind(sampleId, diagnostics)
+as_tibble(diagnostics)          # figure out how to wrap this
+```
 #### Exploring Sub-Classes of Breast cancer
 We select out only those cases that are breast cancer and see what data are available to us:
 
