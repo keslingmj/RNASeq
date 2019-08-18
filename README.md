@@ -7,4 +7,4 @@ I'm adding some of my RNA-Seq Data Analysis to this page.
 
 ---
 # AWS
-[A. Detailed Instructions for Converting VirtualBox VMs to AWS AMIs](https://github.com/keslingmj/Upload_VM_S3_Convert_AMI/blob/master/Upload_Convert_VM.md)
+[A. Detailed Instructions for Converting VirtualBox VMs to AWS AMIs](https://keslingmj.github.com/Upload_VM_S3_Convert_AMI/blob/master/Upload_Convert_VM.md)
