@@ -380,7 +380,17 @@ head(brcaSampleData1097, n=4)
     ## 3 TCGA-B6-A0IE-01A;TCGA-B6-A0IE-01Z;TCGA-B6-A0IE-10A
     ## 4 TCGA-B6-A0RP-01A;TCGA-B6-A0RP-01Z;TCGA-B6-A0RP-10A
 
+### Exporting Full Set of Breast Cancer Sample Attributes
+
+As part of our work, we'll want to work on the full set of breast cancer samples. So we'll export the *brcaSampleData1097* data frame at this point for later use.
+
+``` r
+write.table(brcaSampleData1097, "fullTCGAAttributes.txt", sep="\t", row.names = FALSE)
+```
+
 ### Exploring Sub-Classes of Breast cancer
+
+For some work we'll do on data simulation, we'll subset the full attribute data frame to those having specific attributes.
 
 We select out only those cases that are breast cancer and see what data are available to us:
 
