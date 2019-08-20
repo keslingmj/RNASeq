@@ -385,7 +385,7 @@ head(brcaSampleData1097, n=4)
 As part of our work, we'll want to work on the full set of breast cancer samples. So we'll export the *brcaSampleData1097* data frame at this point for later use.
 
 ``` r
-write.table(brcaSampleData1097, "fullTCGAAttributes.txt", sep="\t", row.names = FALSE)
+write.table(brcaSampleData1097, "TCGA_Attributes_full.txt", sep="\t", row.names = FALSE)
 ```
 
 ### Exploring Sub-Classes of Breast cancer
