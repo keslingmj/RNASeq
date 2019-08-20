@@ -146,11 +146,13 @@ In order to facilitate obtaining RNA-Seq data samples without RNA degradation or
 
 #### Downloading the Wang Datasets
 
-The relevant file of breast cancer data was found at <https://figshare.com/articles/Data_record_3/5330593>. This "Data Record 3" refers to samples that 1) had "Expected Counts" from the RSEM algorithm, 2) Uniform Processing yielding FPKM from RSEM's output and quantile normalized, and 3) batch-effect-corrected using the ComBat software. The BRCA data file is called "brca-rsem-fpkm-tcga-t.txt.gz" and was 35.11 MB compressed. Once decompressed, it yielded a single file called "brcarsemfpkmtcgat.txt".
+The relevant directory of breast cancer data was found at <https://figshare.com/articles/Data_record_3/5330593>. This "Data Record 3" refers to samples that 1) had "Expected Counts" from the RSEM algorithm, 2) Uniform Processing yielding FPKM from RSEM's output and quantile normalized, and 3) batch-effect-corrected using the ComBat software.
 
-The relevant file of healthy breast samples was found at the same figshare.com link above and the file is called "breast-rsem-fpkm-gtex.txt.gz" is 3.52 MB compressed. Once decompressed, it yielded a single file called "breastrsemfpkmgtex.txt".
+-   The TCGA data file is called *brca-rsem-fpkm-tcga-t.txt.gz* and is 35.11 MB compressed. Once decompressed, it yielded a single file called *brcarsemfpkmtcgat.txt*. All 982 samples from this file are tissue type = 01, which is "tumor", in this case, "breast tumor".
 
--   There are TCGA samples that are actually healthy. I still need to go back and review the 3rd breast sample from the figshare.com directory.\*
+-   A second TCGA file is called *brca-rsem-fpkm-tcga.txt.gz* and is 4.24 MB compressed. Once decompressed, it yielded a single file called *brcarsemfpkmtcgat.txt*, which is almost the same name as the first file. All 110 samples from this file are tissue type = 11, which is "Solid (breast) tissue normal".
+
+-   The GTEx file of healthy breast samples was found at the same figshare.com link above and the file is called *breast-rsem-fpkm-gtex.txt.gz* is 3.52 MB compressed. Once decompressed, it yielded a single file called *breastrsemfpkmgtex.txt*, and contained 89 samples of "Solid (breast) tissue normal".
 
 #### Subsetting the Wang Datasets
 
@@ -381,14 +383,6 @@ colnames(dfBrca19) "TCGA.5T.A9QA.01A.11R.A41B.07" Infiltrating duct mixed with o
 \[19\] "TCGA.B6.A1KN.01A.11R.A13Q.07"
 "TCGA.BH.A0B8.01A.21R.A056.07"
 
-*This data can be accessed via Bioconductor using the GenomicDataCommons package*
-
-#### Might be more interesting to plot 30 Histograms together
-
-#### I should model genes that look like they change across studies
-
-#### I should confirm that all TCGA samples are indeed cancer samples.
-
 Modeling Realistic Data
 -----------------------
 
@@ -404,11 +398,14 @@ ggplot(dfHardy0, aes(x=mean, y=cv)) +
    # xlim(c(0.01, 420000)) + ylim(c(0.01, 420000)) +
    scale_x_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
    scale_y_continuous(trans = 'log2') + #, limits=c(0.01, 420000000)) +
-   labs(title="Coefficient of Variation vs Mean FKPM of RNA-Seq of Genes across\n19 Healthy Breast Samples (FPKM)") +
-   geom_smooth(method="loess", span=0.1)
+   labs(title="Coefficient of Variation vs Mean FKPM of RNA-Seq of Genes across\n19 Healthy Breast Samples (FPKM)") 
 ```
 
 <img src="FDR_and_Replicates_files/figure-markdown_github/unnamed-chunk-20-1.png" width="90%" height="90%" style="display: block; margin: auto;" />
+
+``` r
+   # geom_smooth(method="loess", span=0.1)
+```
 
 ### Interpretation
 

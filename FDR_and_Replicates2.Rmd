@@ -689,7 +689,13 @@ colnames(dfBrca19)
 
 
 
+*This data can be accessed via Bioconductor using the GenomicDataCommons package*
 
+#### Might be more interesting to plot 30 Histograms together 
+
+#### I should model genes that look like they change across studies
+
+#### I should confirm that all TCGA samples are indeed cancer samples.
 
 
 
