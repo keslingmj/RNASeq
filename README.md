@@ -1,7 +1,7 @@
 # RNASeq Sample Attribute Processing
 I'm adding some of my RNA-Seq Data Analysis to this page.
 
-[1. Determining Important Sample Attributes in Genomic Data Commons](GDC_Sample_Attribute_Extraction.md)
+[1. Determining Important Sample Attributes in Genomic Data Commons](GDC_Sample_Attribute_Extraction.md)  
 [2. Cleaning Up RNASeq and Sample Attribute Dataframes](https://keslingmj.github.io/Clean_RNASeq_Attributes/QA.html)
 ---
 # RNASeq Simulation (in progress)
