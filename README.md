@@ -2,7 +2,7 @@
 I'm adding some of my RNA-Seq Data Analysis to this page.
 
 [1. Determining Important Sample Attributes in Genomic Data Commons](GDC_Sample_Attribute_Extraction.md)
-[2. Cleaning Up RNASeq and Sample Attribute Dataframes[(https://keslingmj.github.io/Clean_RNASeq_Attributes/QA.html)
+[2. Cleaning Up RNASeq and Sample Attribute Dataframes](https://keslingmj.github.io/Clean_RNASeq_Attributes/QA.html)
 ---
 # RNASeq Simulation (in progress)
 [1. Effect of Sample Replicates on False Discovery Rate and Statistical Power](FDR_and_Replicates.md)
