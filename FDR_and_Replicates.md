@@ -17,6 +17,9 @@ This document performs simulations of RNA-Seq experiments of increasing complexi
 
 Furthermore, it's widely known that in order to publish a list of transcripts, one needs to control the level of False Positives by adjusting the p-values of the transcripts. This is typically done using the Benjamini-Hochberg technique of converting p-values to q-values to correct for the multiple-testing problem that exists in RNA-Seq analysis. We therefore look at the metrics of Power and FDR both before and after the Benjamini-Hochberg (BH) correction as a function of the number of (biological) sample replicates.
 
+NOTE: I HAVE NOT YET INCORPORATED EMPIRICAL BAYES SHRINKAGE NOR INDEPENDENT COUNTS FILTERING ON THESE DATA TO IMPROVE THEIR PERFORMANCE.
+----------------------------------------------------------------------------------------------------------------------------------------
+
 ### Power and FDR
 
 Ideally, we'll be able to identify all the transcripts that are changing between control and treatment samples. In this simulation, we call these transcripts the **alt-transcripts** and the fraction of them that are correctly identified by us is the True Positive Rate (TPR), which is also known as the **Statistical Power**. When the Power is low, that means that many transcripts of interest were not identified. These transcripts are the False Negatives. So the higher the Power, the lower number of False Negatives.

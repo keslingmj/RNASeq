@@ -55,6 +55,8 @@ that exists in RNA-Seq analysis.  We therefore look at the metrics of Power
 and FDR both before and after the Benjamini-Hochberg (BH) correction as a 
 function of the number of (biological) sample replicates.
 
+## NOTE: I HAVE NOT YET INCORPORATED EMPIRICAL BAYES SHRINKAGE NOR INDEPENDENT COUNTS FILTERING ON THESE DATA TO IMPROVE THEIR PERFORMANCE.
+
 ### Power and FDR
 Ideally, we'll be able to identify all the transcripts that are changing between
 control and treatment samples.  In this simulation, we call these transcripts
