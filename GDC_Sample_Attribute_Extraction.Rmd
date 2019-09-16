@@ -288,5 +288,7 @@ write.table(brcaDuctF40W_86, "brcaDuctF40W_86.txt", sep="\t", row.names=FALSE)
 
 This file can now be used to study samples from various studies.
 
+A helpful link regarding the TCGA Categories and values can be found [here](https://docs.gdc.cancer.gov/Data_Dictionary/viewer/).
+
 
 

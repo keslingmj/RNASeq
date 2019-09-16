@@ -4,6 +4,9 @@ I'm adding some of my RNA-Seq Data Analysis to this page.
 [1. Determining Important Sample Attributes in Genomic Data Commons](GDC_Sample_Attribute_Extraction.md)  
 [2. Cleaning Up RNASeq and Sample Attribute Dataframes](https://keslingmj.github.io/Clean_RNASeq_Attributes/QA.html)
 ---
+# Machine Learning on RNA-Seq Data
+[1. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer](https://keslingmj.github.io/MachineLearningRNASeq/Lasso_on_BRCA_RNASeq.html)
+---
 # RNASeq Simulation (in progress)
 [1. Effect of Sample Replicates on False Discovery Rate and Statistical Power](FDR_and_Replicates.md)
 ---
