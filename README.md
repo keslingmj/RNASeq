@@ -8,12 +8,14 @@ I'm adding some of my RNA-Seq Data Analysis to this page.
 
 # Machine Learning on RNA-Seq Data
 [1. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer.  ComBat-corrected structured data.](https://keslingmj.github.io/MachineLearningRNASeq/Combat_Analysis_ObjOrient.html)  
-[2. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer.  Non-batch corrected with structured data.](https://keslingmj.github.io/MachineLearningRNASeq/Toil_Analysis_ObjOrient.html)
+[2. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer.  Non-batch corrected with structured data.](https://keslingmj.github.io/MachineLearningRNASeq/Toil_Analysis_ObjOrient.html)  
 ---
 
 # AWS
-[A. Detailed Instructions for Converting VirtualBox VMs to AWS AMIs](https://keslingmj.github.io/Upload_VM_S3_Convert_AMI/Upload_Convert_VM.html)
+[A. Detailed Instructions for Converting VirtualBox VMs to AWS AMIs](https://keslingmj.github.io/Upload_VM_S3_Convert_AMI/Upload_Convert_VM.html)  
 ---
 # Medical and Genetic Studies
 [1. Multifactor Clinical Study.](https://keslingmj.github.io/Proof-of-Concept/Medical_Outcome.html)  
----
+---  
+# Python
+[1. 1. Query cBioPortal with HUGO gene name, and determine all mutations in that gene across cBioPortal, along with the number of unique samples containing each mutation.](https://github.com/keslingmj/python/blob/master/cBioPortal.py)  
