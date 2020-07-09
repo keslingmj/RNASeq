@@ -7,7 +7,8 @@ I'm adding some of my RNA-Seq Data Analysis to this page.
 ---
 
 # Machine Learning on RNA-Seq Data
-[1. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer.  Non-batch corrected with structured data.](https://keslingmj.github.io/MachineLearningRNASeq/Toil_Analysis_ObjOrient.html)
+[1. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer.  ComBat-corrected structured data.](https://keslingmj.github.io/MachineLearningRNASeq/Combat_Analysis_ObjOrient.html)  
+[2. Using Lasso-Regularized Logistic Regression to Predict Breast Cancer.  Non-batch corrected with structured data.](https://keslingmj.github.io/MachineLearningRNASeq/Toil_Analysis_ObjOrient.html)
 ---
 
 # AWS
