@@ -18,4 +18,4 @@ I'm adding some of my RNA-Seq Data Analysis to this page.
 [1. Multifactor Clinical Study.](https://keslingmj.github.io/Proof-of-Concept/Medical_Outcome.html)  
 ---  
 # Python
-[1. 1. Query cBioPortal with HUGO gene name, and determine all mutations in that gene across cBioPortal, along with the number of unique samples containing each mutation.](https://github.com/keslingmj/python/blob/master/cBioPortal.py)  
+[1. Query cBioPortal with HUGO gene name, and determine all mutations in that gene across cBioPortal, along with the number of unique samples containing each mutation.](https://github.com/keslingmj/python/blob/master/cBioPortal.py)  
